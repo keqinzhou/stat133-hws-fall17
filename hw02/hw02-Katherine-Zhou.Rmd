@@ -1,0 +1,137 @@
+---
+title: "hw02-Katherine-Zhou"
+author: "Katherine Zhou"
+date: "September 28, 2017"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,tidy.opts=list(width.cutoff=60),tidy=TRUE)
+```
+
+
+```{r}
+# download csv file to your working directory (code not included)
+# read.csv()
+file <- "data/nba2017-player-statistics.csv"
+data1 <- data.frame(read.csv(file, header = TRUE, colClasses = c("character","character","factor","character","double",rep("integer",19))),stringsAsFactors = FALSE)
+str(data1)
+library(dplyr)
+```
+
+
+```{r}
+# read_csv
+library(readr)
+data2 <- data.frame(read_csv(file,col_types = list(
+  .default = col_integer(),
+  Player = col_character(),
+  Team = col_character(),
+  Position = col_factor(c('C','PF','PG','SF','SG')),
+  Experience = col_character(),
+  Salary = col_double()
+)),stringsAsFactors = FALSE)
+str(data2)
+```
+
+```{r}
+#change R to 0 and convert experience to integer
+data2[4][data2[4]=="R"]<- 0
+
+data2$Experience <- as.integer(data2$Experience)
+str(data2)
+```
+
+```{r}
+
+Missed_FG <- data2$FGA-data2$FGM
+Missed_FT <- data2$FTA-data2$FTM
+Point2 <- data2$Points2
+Point3 <- data2$Points3
+FTM <- data2$FTM
+PTS <- Point2*2+Point3*3+FTM
+REB <- data2$OREB+data2$DREB
+GP <- data2$GP
+MPG <- data2$MIN/GP
+AST <-data2$AST
+STL <- data2$STL
+BLK <- data2$BLK
+TO <- data2$TO
+
+EFF <- (PTS+REB+AST+STL+BLK-Missed_FG-Missed_FT-TO)/GP
+data2 <- cbind(data2,EFF)
+str(data2)
+summary(EFF)
+
+```
+
+
+```{r}
+
+hist(EFF)
+a <- select(slice(arrange(data2,desc(EFF)),1:10),Player,Team,Salary,EFF)
+a
+
+b <- select(filter(data2, EFF<0),Player)
+b
+```
+
+```{r}
+#cor calculations
+
+
+c1 <- cor(PTS,EFF)
+c2 <- cor(REB,EFF)
+c3 <- cor(STL,EFF)
+c4 <- cor(AST,EFF)
+c5 <- cor(BLK,EFF)
+c6 <- cor(-Missed_FT,EFF)
+c7 <- cor(-Missed_FG,EFF)
+c8 <- cor(-TO,EFF)
+ 
+cor <- c(c1,c2,c3,c4,c5,c6,c7,c8)
+cor <- sort(cor,decreasing = TRUE)
+cor
+
+stats <- c('PTS','REB','STL','AST','BLK','Missed_FT','Missed_FG','TO')
+barplot(cor,main="Correlations between Players Stats and EFF",names.arg=stats,ylim=c(-1,1),col=c(rep('grey',5),rep('red',3)),border=NA,cex.names=0.6)
+abline(h=0)
+
+```
+
+```{r}
+#efficiency and salary
+library(ggplot2)
+ggplot(data2,aes(x=EFF,y=Salary))+
+  geom_point()+
+   geom_smooth(method="loess")
+
+cor(EFF,data2$Salary)
+# moderately related. The higher EFF,the higher salary.
+
+library(data.table)
+data3 <- cbind(data2,MPG)
+dat <- as.data.table(data3)
+
+```
+
+```{r}
+m <- filter(dat,MPG>=20)
+players2_name <- select(m,Player)
+players2_name
+
+players2 <- data.frame(m)
+
+ggplot(players2,aes(x=EFF,y=Salary))+
+  geom_point()+
+  geom_smooth(method="loess")
+
+cor(players2$EFF,players2$Salary)
+# R decreases and it was less correlated than the previous one.
+
+# Comments
+
+# Remembering all codes was hard. More practice was needed. Whenever I had questions, I searched them in Google and learnt myself. It took me two hours to complete this assignment and the EFF calculation part was the most time consuming. I felt I grasped everything in this assignment.
+
+
+```
