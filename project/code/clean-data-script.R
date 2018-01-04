@@ -1,0 +1,112 @@
+
+source('code/functions.R')
+dat <- read.csv('data/rawdata/rawscores.csv',header=TRUE)
+dat[is.na(dat)] <- 0
+
+# rescale quizzes
+dat$QZ1 <- rescale100(dat$QZ1,0,12)
+dat$QZ2 <- rescale100(dat$QZ2,0,18)
+dat$QZ3 <- rescale100(dat$QZ3,0,20)
+dat$QZ4 <- rescale100(dat$QZ4,0,20)
+
+# rescale exams 
+dat$Test1 <- rescale100(dat$EX1,0,80)
+dat$Test2 <- rescale100(dat$EX2,0,90)
+
+#rescale ATT
+Lab <- matrix(NA,nrow=nrow(dat),ncol=1)
+for (i in 1:334){
+Lab[i] <- score_lab(dat[i,10])  
+}
+dat$Lab <- as.numeric(Lab)
+
+#rescale lab 
+
+#Homework with dropping the lowest one 
+Homework <- matrix(NA,nrow=nrow(dat),ncol=1)
+for (i in 1:nrow(dat)){
+  Homework[i] <- score_homework(dat[i,1:9],drop=TRUE)
+}
+
+dat$Homework <- as.numeric(Homework)
+
+#Quiz with dropping the lowest one 
+Quiz <- matrix(NA,nrow=nrow(dat),ncol=1)
+for (i in 1:nrow(dat)){
+  Quiz[i] <- score_quiz(dat[i,11:14],drop=TRUE)
+}
+
+dat$Quiz <- as.numeric(Quiz)
+
+# overall
+Overall <- matrix(NA,nrow=nrow(dat),ncol=1)
+for (i in 1:nrow(dat)){
+  Overall[i] <- 0.1*dat$Lab[i]+0.3*dat$Homework[i]+0.15*dat$Quiz[i]+0.2*dat$Test1[i]+0.25*dat$Test2[i]
+}
+
+dat$Overall <- as.numeric(Overall)
+
+
+# grade calculation
+
+g <- function(a){
+  if (a>=0 & a<50){
+    'F'
+  }
+  else if (a>=50 & a<60){
+    'D'
+  }
+  else if (a>=60 & a<70){
+    'C-'
+  }
+  else if (a>=70 & a<77.5){
+    'C'
+  }
+  else if (a>=77.5 & a<79.5){
+    'C+'
+  }
+  
+  else if (a>=79.5 & a<82){
+    'B-'
+  }
+  else if (a>=82 & a<86){
+    'B'
+  }
+  else if (a>=86 & a<88){
+    'B+'
+  }
+  else if (a>=88 & a<90){
+    'A-'
+  }
+  else if (a>=90 & a<95){
+    'A'
+  }
+  else if (a>=95 & a<=100){
+    'A+'
+  }
+}
+
+grade <- as.numeric(matrix(NA, nrow=334,ncol=1))
+for (i in 1:334){
+ grade[i] <- g(dat$Overall[i]) 
+}
+dat$Grade <- grade
+
+#sink()
+c <- cbind(dat$Lab,dat$Homework,dat$Quiz,dat$Test1,dat$Test2,dat$Overall)
+name <- c('Lab-stats.txt','Homework-stats.txt','Quiz-stats.txt','Test1-stats.txt','Test2-stats.txt','Overall-stats.txt')
+for (i in 1: 6){
+  stats <- summary_stats(c[,i])
+  p <- paste('output/',name[i],sep='')
+  sink(file=p)
+  print_stats(stats)
+  sink()
+}
+
+
+sink(file='output/summary-cleanscores.txt')
+str(dat)
+sink()
+
+write.csv(dat,'data/cleandata/cleanscores.csv')
+
